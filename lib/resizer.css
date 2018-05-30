@@ -1,0 +1,19 @@
+.resizer {
+    height: inherit;
+    min-height: 200px;
+    float: left;
+    position: relative;
+    cursor: ew-resize;
+    width: 10px;
+    opacity: 0;
+}
+
+.resizer:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #c8c8c8;
+    left: 50%;
+}

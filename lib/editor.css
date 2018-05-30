@@ -1,0 +1,16 @@
+.end-edit {
+    display: none;
+    position: absolute;
+    left: 70%;
+    top: 30%;
+}
+
+.go-edit {
+    position: absolute;
+    left: 70%;
+    top: 30%;
+}
+
+.editor {
+    display: none;
+}
