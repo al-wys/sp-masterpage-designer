@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="./tokenfactoryiframe_a2d42a88.js.download"></script>
+</head>
+<body>
+    <script type="text/javascript" nonce="">
+        
+                    
+                var requestExecutorSettings = {
+                    originAuthorityValidator: O365SuiteServiceProxy.ServiceHandlers.validateOrigin,
+                    trustedOriginAuthorities: [],
+                    allowedEndpoints: [{host: "^webshell\\.suite\\.office\\.com$",paths: ["^api/(.*?)"]},{host: "^ocws\\.officeapps\\.live\\.com$",paths: ["^ocs/(.*?)"]},{host: "^graph\\.microsoft\\.com$",paths: ["^v1\\.0/(.*?)"]},{host: "^management\\.azure\\.com$",paths: ["^providers/Microsoft.BusinessAppDiscovery/(.*?)"]}],
+                    allowedResources: [{resource: "officeapps.live.com",hosts: ["ocws.officeapps.live.com"]},{resource: "graph.microsoft.com",hosts: ["graph.microsoft.com"]},{resource: "webshell.suite.office.com",hosts: ["webshell.suite.office.com"]},{resource: "management.azure.com",hosts: ["management.azure.com"]}],
+                    shouldAttachOauthTokens: true,
+                    trustedOriginAuthoritiesSetFromServer: false
+                };
+
+                O365SuiteServiceProxy.RequestExecutorMessageProcessor.init(requestExecutorSettings);
+            
+                    
+                var tokenFactorySettings = {
+                    clientId: "89bee1f7-5e6e-4d8a-9f3d-ecd601259da7",
+                    instance: "https://login.microsoftonline.com/",
+                    tenant: 'common',
+                    cacheLocation: "sessionStorage",
+                    clientShellServiceOrigin: "https://webshell.suite.office.com",
+                    parentPageOrigin: "https://contoso.sharepoint.com",
+                    shsid: "b324230f-30b0-4a10-bbde-be2312f0679c"
+                };
+
+                O365TokenFactoryIframe.TokenFactoryInsideIframe.init(tokenFactorySettings);
+    </script>
+
+
+</body></html>

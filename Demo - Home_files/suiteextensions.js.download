@@ -1,0 +1,1177 @@
+﻿var SuiteExtensions;
+(function (SuiteExtensions) {
+    var AddInPropertyName = (function () {
+        function AddInPropertyName() {
+        }
+        AddInPropertyName.AddInId = "addInId";
+        AddInPropertyName.Type = "type";
+        AddInPropertyName.AppId = "appId";
+        AddInPropertyName.DisplayName = "displayName";
+        return AddInPropertyName;
+    })();
+    SuiteExtensions.AddInPropertyName = AddInPropertyName;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var AddInType = (function () {
+        function AddInType() {
+        }
+        AddInType.FileHandler = "FileHandler";
+        return AddInType;
+    })();
+    SuiteExtensions.AddInType = AddInType;
+
+    var AddIn = (function () {
+        function AddIn(extension) {
+            this.addInId = extension[SuiteExtensions.AddInPropertyName.AddInId];
+            this.type = extension[SuiteExtensions.AddInPropertyName.Type];
+            this.appId = extension[SuiteExtensions.AddInPropertyName.AppId];
+            this.displayName = extension[SuiteExtensions.AddInPropertyName.DisplayName];
+            this.id = this.appId + "_" + this.addInId;
+        }
+        return AddIn;
+    })();
+    SuiteExtensions.AddIn = AddIn;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var FileHandlerAddInPropertyName = (function (_super) {
+        __extends(FileHandlerAddInPropertyName, _super);
+        function FileHandlerAddInPropertyName() {
+            _super.apply(this, arguments);
+        }
+        FileHandlerAddInPropertyName.Extension = "extension";
+        FileHandlerAddInPropertyName.FileIcon = "fileIcon";
+        FileHandlerAddInPropertyName.OpenUrl = "openUrl";
+        FileHandlerAddInPropertyName.PreviewUrl = "previewUrl";
+        FileHandlerAddInPropertyName.NewFileUrl = "newFileUrl";
+        return FileHandlerAddInPropertyName;
+    })(SuiteExtensions.AddInPropertyName);
+    SuiteExtensions.FileHandlerAddInPropertyName = FileHandlerAddInPropertyName;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var FileHandlerAddIn = (function (_super) {
+        __extends(FileHandlerAddIn, _super);
+        function FileHandlerAddIn(extension) {
+            _super.call(this, extension);
+
+            var extensionString = extension["properties"][SuiteExtensions.FileHandlerAddInPropertyName.Extension];
+            if (extensionString != undefined) {
+                this.extension = extensionString.split(";");
+
+                var shouldLog = (this.extension.length > 1);
+                if (shouldLog) {
+                    var hostConfig = SuiteExtensions.SuiteExtensionsDataStore.GetInstance().hostConfig;
+                    if (hostConfig != null) {
+                        hostConfig.logging.WriteStart("StartParsingLongExtensionsProperty");
+                        hostConfig.logging.WriteDebugLog("ParsingLongExtensionsProperty", false, "Number of extensions is " + this.extension.length);
+                    }
+                }
+
+                this.extension = this.extension.filter(function (e) {
+                    return e.length > 0;
+                });
+
+                var collection = {};
+                this.extension.forEach(function (extension) {
+                    collection[extension] = true;
+                });
+                this.extension = Object.keys(collection);
+
+                if (shouldLog) {
+                    if (hostConfig != null) {
+                        hostConfig.logging.WriteDebugLog("ParsingLongExtensionsProperty", false, "Number of unique extensions is " + this.extension.length);
+                        hostConfig.logging.WriteSuccess("SuccessParsingLongExtensionsProperty");
+                    }
+                }
+            } else {
+                this.extension = undefined;
+            }
+            this.fileIcon = extension["properties"][SuiteExtensions.FileHandlerAddInPropertyName.FileIcon];
+            this.openUrl = extension["properties"][SuiteExtensions.FileHandlerAddInPropertyName.OpenUrl];
+            this.previewUrl = extension["properties"][SuiteExtensions.FileHandlerAddInPropertyName.PreviewUrl];
+            this.newFileUrl = extension["properties"][SuiteExtensions.FileHandlerAddInPropertyName.NewFileUrl];
+        }
+        return FileHandlerAddIn;
+    })(SuiteExtensions.AddIn);
+    SuiteExtensions.FileHandlerAddIn = FileHandlerAddIn;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var AddInFilterOperation = (function () {
+        function AddInFilterOperation() {
+        }
+        AddInFilterOperation.Equals = 1;
+        AddInFilterOperation.NotNull = 2;
+        AddInFilterOperation.Contains = 3;
+        return AddInFilterOperation;
+    })();
+    SuiteExtensions.AddInFilterOperation = AddInFilterOperation;
+
+    var FilterClause = (function () {
+        function FilterClause(name, operation, value) {
+            this.name = name;
+            this.operation = operation;
+            this.value = value;
+        }
+        FilterClause.prototype.IsMatch = function (addIn) {
+            var testValue = addIn[this.name];
+            switch (this.operation) {
+                case AddInFilterOperation.Equals:
+                    if (testValue == undefined) {
+                        return false;
+                    }
+                    if (typeof testValue == "object") {
+                        throw new Error("Error: FilterClause: the property to test for Equals shouldn't be an object.");
+                    }
+                    return (testValue == this.value ? true : false);
+                case AddInFilterOperation.NotNull:
+                    return (testValue != undefined ? true : false);
+                    break;
+                case AddInFilterOperation.Contains:
+                    if (testValue == undefined) {
+                        return false;
+                    }
+                    if (typeof testValue != "object" || typeof testValue.indexOf != "function") {
+                        throw new Error("Error: FilterClause: the property to test for Contains should be an Array.");
+                    }
+                    return (testValue.indexOf(this.value) >= 0 ? true : false);
+                    break;
+                default:
+                    return false;
+            }
+        };
+        return FilterClause;
+    })();
+
+    var AddInFilter = (function () {
+        function AddInFilter() {
+            this.clauses = [];
+        }
+        AddInFilter.prototype.add = function (name, operation, value) {
+            this.clauses.push(new FilterClause(name, operation, value));
+        };
+
+        AddInFilter.prototype.IsMatch = function (addIn) {
+            var result = true;
+            for (var index in this.clauses) {
+                result = result && this.clauses[index].IsMatch(addIn);
+            }
+            return result;
+        };
+        return AddInFilter;
+    })();
+    SuiteExtensions.AddInFilter = AddInFilter;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var AzureDataPipe = (function () {
+        function AzureDataPipe() {
+            this.unittestFlag = false;
+        }
+        AzureDataPipe.prototype.getData = function (extensionType, hostConfig) {
+            if (hostConfig.getDataCall) {
+                hostConfig.getDataCall(extensionType, SuiteExtensions.SuiteExtensionsDataStore.dataPipeSuccessCallback, SuiteExtensions.SuiteExtensionsDataStore.dataPipeFailCallback);
+            }
+        };
+        return AzureDataPipe;
+    })();
+    SuiteExtensions.AzureDataPipe = AzureDataPipe;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var ControlType = (function () {
+        function ControlType() {
+        }
+        ControlType.Icon = 0;
+        ControlType.Preview = 1;
+        ControlType.Edit = 2;
+        ControlType.FileCreation = 3;
+        return ControlType;
+    })();
+    SuiteExtensions.ControlType = ControlType;
+
+    var ControlCreationProperty = (function () {
+        function ControlCreationProperty() {
+        }
+        ControlCreationProperty.FileExtension = 'fileExtension';
+        return ControlCreationProperty;
+    })();
+    SuiteExtensions.ControlCreationProperty = ControlCreationProperty;
+
+    var ControlFactory = (function () {
+        function ControlFactory() {
+        }
+        ControlFactory.CreateControl = function (fileExtension, controlType) {
+            var dataStore = SuiteExtensions.SuiteExtensionsDataStore.GetInstance();
+            if (dataStore.hostConfig == null) {
+                return null;
+            }
+            if (!dataStore.hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.FileHandlerFileCreation) && controlType == ControlType.FileCreation) {
+                return null;
+            }
+
+            var debugMessage = "Creating File Handler Control: [extension = " + fileExtension + "][control = " + controlType + "]";
+            dataStore.hostConfig.logging.WriteDebugLog("CreatingControl", false, debugMessage);
+
+            var propertyBag = new Object();
+            propertyBag[ControlCreationProperty.FileExtension] = fileExtension;
+
+            var addInFilter = new SuiteExtensions.AddInFilter();
+            switch (controlType) {
+                case ControlType.Icon:
+                    addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.Extension, SuiteExtensions.AddInFilterOperation.Contains, fileExtension);
+                    if (!dataStore.hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.FileHandlerAddInPicker)) {
+                        addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.FileIcon, SuiteExtensions.AddInFilterOperation.NotNull, "");
+                    }
+                    break;
+                case ControlType.Preview:
+                    addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.Extension, SuiteExtensions.AddInFilterOperation.Contains, fileExtension);
+                    if (!dataStore.hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.FileHandlerAddInPicker)) {
+                        addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.PreviewUrl, SuiteExtensions.AddInFilterOperation.NotNull, "");
+                    }
+                    break;
+                case ControlType.Edit:
+                    addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.Extension, SuiteExtensions.AddInFilterOperation.Contains, fileExtension);
+                    if (!dataStore.hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.FileHandlerAddInPicker)) {
+                        addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.OpenUrl, SuiteExtensions.AddInFilterOperation.NotNull, "");
+                    }
+                    break;
+                case ControlType.FileCreation:
+                    if (fileExtension != "") {
+                        throw new Error("Error: CreateControl: parameter fileExtension must be empty string when control type is file creation");
+                    }
+                    addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.Extension, SuiteExtensions.AddInFilterOperation.NotNull, "");
+                    addInFilter.add(SuiteExtensions.FileHandlerAddInPropertyName.NewFileUrl, SuiteExtensions.AddInFilterOperation.NotNull, "");
+                    break;
+                default:
+                    break;
+            }
+
+            var addIns = dataStore.getAddIns(SuiteExtensions.AddInType.FileHandler, addInFilter);
+            dataStore.hostConfig.logging.WriteDebugLog("CreatingControl", false, "Found " + (addIns == null ? 0 : addIns.length) + "AddIn");
+
+            if (addIns != null && addIns.length > 0) {
+                dataStore.hostConfig.logging.WriteStart("Collision_Start");
+
+                if (addIns.length === 1) {
+                    dataStore.hostConfig.logging.WriteSuccess("Collision_Success");
+                } else {
+                    dataStore.hostConfig.logging.WriteFailure("Collision_Failure");
+                }
+
+                return ControlFactory.CreateControlCommon(addIns, controlType, propertyBag);
+            } else {
+                return null;
+            }
+        };
+
+        ControlFactory.CreateControlCommon = function (addIns, controlType, propertyBag) {
+            if (typeof SuiteExtensionsControls != 'undefined') {
+                var dataStore = SuiteExtensions.SuiteExtensionsDataStore.GetInstance();
+                var debugMessage = "Creating Common Control:[control = " + controlType + "]";
+                dataStore.hostConfig.logging.WriteDebugLog("CreatingCommonControl", false, debugMessage);
+
+                if (addIns.length > 0 && addIns[0].type === SuiteExtensions.AddInType.FileHandler) {
+                    var fileHandlerAddIns = addIns;
+                    switch (controlType) {
+                        case ControlType.Icon:
+                            var fileExtension = propertyBag[ControlCreationProperty.FileExtension];
+                            return new SuiteExtensionsControls.IconControl(fileHandlerAddIns, fileExtension);
+                        case ControlType.Preview:
+                            var fileExtension = propertyBag[ControlCreationProperty.FileExtension];
+                            return new SuiteExtensionsControls.PreviewControl(fileHandlerAddIns, fileExtension);
+                        case ControlType.Edit:
+                            var fileExtension = propertyBag[ControlCreationProperty.FileExtension];
+                            return new SuiteExtensionsControls.EditControl(fileHandlerAddIns, fileExtension);
+                        case ControlType.FileCreation:
+                            return new SuiteExtensionsControls.FileCreationMenu(fileHandlerAddIns);
+                        default:
+                            dataStore.hostConfig.logging.WriteDebugLog("CreatingCommonControl", true, "Invalid Control Type");
+                            return null;
+                    }
+                }
+            }
+
+            return null;
+        };
+        return ControlFactory;
+    })();
+    SuiteExtensions.ControlFactory = ControlFactory;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    SuiteExtensions.__namespace = true;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var Logging = (function () {
+        function Logging() {
+            this.prefix = null;
+        }
+        Logging.prototype.WriteDebugLog = function (logName, logLevel, message) {
+        };
+        Logging.prototype.WriteEngagementLog = function (logName, extensionType) {
+        };
+        Logging.prototype.WriteStart = function (startName) {
+        };
+        Logging.prototype.WriteSuccess = function (successName) {
+        };
+        Logging.prototype.WriteFailure = function (failureName) {
+        };
+        return Logging;
+    })();
+    SuiteExtensions.Logging = Logging;
+})(SuiteExtensions || (SuiteExtensions = {}));
+
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var SharePointLogging = (function () {
+        function SharePointLogging(unused) {
+            this.prefix = SuiteExtensions.AddInType.FileHandler + "_";
+        }
+        SharePointLogging.prototype.WriteDebugLog = function (logName, logLevel, message) {
+            if (typeof WriteDebugLog !== 'undefined') {
+                WriteDebugLog(this.prefix + logName, logLevel, message);
+            }
+        };
+
+        SharePointLogging.prototype.WriteEngagementLog = function (logName, extensionType) {
+            if (typeof WriteEngagementLog !== 'undefined') {
+                WriteEngagementLog(this.prefix + logName, extensionType);
+            }
+        };
+
+        SharePointLogging.prototype.WriteStart = function (startName) {
+            if (typeof WriteStart !== 'undefined') {
+                WriteStart(this.prefix + startName);
+            }
+        };
+
+        SharePointLogging.prototype.WriteSuccess = function (successName) {
+            if (typeof WriteSuccess !== 'undefined') {
+                WriteSuccess(this.prefix + successName);
+            }
+        };
+
+        SharePointLogging.prototype.WriteFailure = function (failureName) {
+            if (typeof WriteFailure !== 'undefined') {
+                WriteFailure(this.prefix + failureName);
+            }
+        };
+        return SharePointLogging;
+    })();
+    SuiteExtensions.SharePointLogging = SharePointLogging;
+})(SuiteExtensions || (SuiteExtensions = {}));
+
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var OwaLogging = (function () {
+        function OwaLogging(traceComponent) {
+            this.prefix = SuiteExtensions.AddInType.FileHandler + "_";
+            this.traceComponent = traceComponent;
+        }
+        OwaLogging.prototype.WriteDebugLog = function (logName, logLevel, message) {
+            _js.Trace.logWarning(this.traceComponent, this.prefix + logName + " " + message);
+        };
+
+        OwaLogging.prototype.WriteEngagementLog = function (logName, extensionType) {
+            _js.Trace.logWarning(this.traceComponent, this.prefix + logName + " " + extensionType);
+        };
+
+        OwaLogging.prototype.WriteStart = function (startName) {
+            _js.Trace.logWarning(this.traceComponent, this.prefix + startName);
+        };
+
+        OwaLogging.prototype.WriteSuccess = function (successName) {
+            _js.Trace.logWarning(this.traceComponent, this.prefix + successName);
+        };
+
+        OwaLogging.prototype.WriteFailure = function (failureName) {
+            _js.Trace.logWarning(this.traceComponent, this.prefix + failureName);
+        };
+        return OwaLogging;
+    })();
+    SuiteExtensions.OwaLogging = OwaLogging;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var OneDriveLogging = (function () {
+        function OneDriveLogging(errorHelper, engagement) {
+            this.prefix = SuiteExtensions.AddInType.FileHandler + "OneDrive_";
+            this.errorHelper = errorHelper;
+            this.engagement = engagement;
+        }
+        OneDriveLogging.prototype.WriteDebugLog = function (logName, logLevel, message) {
+            if (logLevel == true) {
+                this.errorHelper.log(message, this.prefix + logName);
+            } else {
+                this.errorHelper.verbose(message, this.prefix + logName);
+            }
+        };
+
+        OneDriveLogging.prototype.WriteEngagementLog = function (logName, extensionType) {
+            this.engagement.logData({ name: this.prefix + logName + extensionType });
+        };
+
+        OneDriveLogging.prototype.WriteStart = function (startName) {
+            this.errorHelper.log("", this.prefix + startName);
+        };
+
+        OneDriveLogging.prototype.WriteSuccess = function (successName) {
+            this.errorHelper.log("", this.prefix + successName);
+        };
+
+        OneDriveLogging.prototype.WriteFailure = function (failureName) {
+            this.errorHelper.log("", this.prefix + failureName);
+        };
+        return OneDriveLogging;
+    })();
+    SuiteExtensions.OneDriveLogging = OneDriveLogging;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var AddInsFlights = (function () {
+        function AddInsFlights() {
+        }
+        AddInsFlights.AzureDataPipe = 0;
+        AddInsFlights.FileHandlerAddInPicker = 1;
+        AddInsFlights.FileHandlerFileCreation = 2;
+        return AddInsFlights;
+    })();
+    SuiteExtensions.AddInsFlights = AddInsFlights;
+
+    var HostConfig = (function () {
+        function HostConfig(userId, getDataCall) {
+            this.enabledFlights = [];
+            this.host = "Office365";
+            this.logging = new SuiteExtensions.Logging();
+            this.cultureName = "en-us";
+            this.resourceId = "https://office365.com/";
+            this.set_logging(null);
+            this.userId = userId;
+            this.getDataCall = getDataCall;
+        }
+        HostConfig.prototype.set_logging = function (arg1, arg2) {
+            switch (this.host) {
+                case "SharePoint":
+                    this.logging = new SuiteExtensions.SharePointLogging(arg1);
+                    break;
+                case "OWA":
+                    this.logging = new SuiteExtensions.OwaLogging(arg1);
+                    break;
+                case "OneDrive":
+                    this.logging = new SuiteExtensions.OneDriveLogging(arg1, arg2);
+                    break;
+                default:
+            }
+        };
+
+        HostConfig.prototype.addFlight = function (flight) {
+            this.enabledFlights.push(flight);
+        };
+
+        HostConfig.prototype.isFlightEnabled = function (flight) {
+            return this.enabledFlights.indexOf(flight) >= 0;
+        };
+        return HostConfig;
+    })();
+    SuiteExtensions.HostConfig = HostConfig;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var RefreshDetectorStatus = (function () {
+        function RefreshDetectorStatus() {
+        }
+        RefreshDetectorStatus.NotRefresh = 0;
+        RefreshDetectorStatus.StorageNotSupported = 1;
+        RefreshDetectorStatus.PerformanceNotSupported = 2;
+        RefreshDetectorStatus.UnknownException = 3;
+        RefreshDetectorStatus.Refresh = 4;
+        return RefreshDetectorStatus;
+    })();
+    SuiteExtensions.RefreshDetectorStatus = RefreshDetectorStatus;
+
+    var RefreshDetector = (function () {
+        function RefreshDetector() {
+            this.status = this.CheckRefresh();
+        }
+        RefreshDetector.GetInstance = function () {
+            if (RefreshDetector.instance == null) {
+                RefreshDetector.instance = new RefreshDetector();
+            }
+            return RefreshDetector.instance;
+        };
+
+        RefreshDetector.prototype.IsRefresh = function () {
+            return this.status == RefreshDetectorStatus.Refresh || this.status == RefreshDetectorStatus.PerformanceNotSupported;
+        };
+
+        RefreshDetector.prototype.GetStatus = function () {
+            return this.status;
+        };
+
+        RefreshDetector.prototype.ListenForRefresh = function () {
+            if (this.pageUnloadListener == null) {
+                this.pageUnloadListener = this.OnPageUnload.bind(this);
+            }
+
+            if (typeof Window !== 'undefined') {
+                Window.prototype.addEventListener.call(window, "unload", this.pageUnloadListener);
+            }
+        };
+
+        RefreshDetector.prototype.OnPageUnload = function () {
+            var lastPage = (location.href + "").split(location.hash || "#")[0];
+            var unloadTime = new Date().getTime();
+            try  {
+                sessionStorage.setItem(RefreshDetector.LastPageKey, lastPage);
+                sessionStorage.setItem(RefreshDetector.UnloadTimeKey, unloadTime.toString());
+            } catch (e) {
+            }
+        };
+
+        RefreshDetector.prototype.CheckRefresh = function () {
+            try  {
+                if (!this.IsSessionStorageSupported()) {
+                    return RefreshDetectorStatus.StorageNotSupported;
+                }
+                var lastPage = sessionStorage.getItem(RefreshDetector.LastPageKey);
+                var unloadTimeString = sessionStorage.getItem(RefreshDetector.UnloadTimeKey);
+                if (lastPage == null || unloadTimeString == null) {
+                    return RefreshDetectorStatus.NotRefresh;
+                }
+
+                var currentPage = (location.href + "").split(location.hash || "#")[0];
+                if (currentPage != lastPage) {
+                    return RefreshDetectorStatus.NotRefresh;
+                }
+                if (window.performance == null || performance.timing == null || performance.timing.navigationStart == null) {
+                    return RefreshDetectorStatus.PerformanceNotSupported;
+                }
+                var unloadTime = Number(unloadTimeString);
+                var navigationTime = performance.timing.navigationStart;
+                if (navigationTime == 0) {
+                    return RefreshDetectorStatus.PerformanceNotSupported;
+                }
+                if (navigationTime - unloadTime > RefreshDetector.MaxDelay) {
+                    return RefreshDetectorStatus.NotRefresh;
+                }
+                return RefreshDetectorStatus.Refresh;
+            } catch (e) {
+                return RefreshDetectorStatus.UnknownException;
+            }
+        };
+
+        RefreshDetector.prototype.IsSessionStorageSupported = function () {
+            try  {
+                sessionStorage.setItem("Test", "2");
+                sessionStorage.removeItem("Test");
+                return true;
+            } catch (e) {
+                return false;
+            }
+        };
+        RefreshDetector.UnloadTimeKey = "RefreshDetector.UnloadTime";
+        RefreshDetector.LastPageKey = "RefreshDetector.LastPage";
+        RefreshDetector.MaxDelay = 100;
+        return RefreshDetector;
+    })();
+    SuiteExtensions.RefreshDetector = RefreshDetector;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    function CallInitializeIconControls() {
+        if (typeof SuiteExtensionsControls !== 'undefined') {
+            SuiteExtensionsControls.InitializeIconControls();
+        } else {
+            setTimeout("SuiteExtensions.CallInitializeIconControls()", 300);
+        }
+    }
+    SuiteExtensions.CallInitializeIconControls = CallInitializeIconControls;
+
+    var ScriptOnDemand = (function () {
+        function ScriptOnDemand() {
+        }
+        ScriptOnDemand.AddScriptToDocument = function (scriptPath, id, existingScriptElement) {
+            if (existingScriptElement) {
+                document.getElementsByTagName('head')[0].removeChild(existingScriptElement);
+            }
+
+            var scriptElement = document.createElement('script');
+            scriptElement.setAttribute("id", id);
+            scriptElement.setAttribute("src", scriptPath);
+            scriptElement.setAttribute("type", "text/javascript");
+            document.getElementsByTagName('head')[0].appendChild(scriptElement);
+            return scriptElement;
+        };
+
+        ScriptOnDemand.LoadControlsJavascript = function () {
+            var dataStore = SuiteExtensions.SuiteExtensionsDataStore.GetInstance();
+            var controlsFileRef = document.getElementById("SuiteExtensionsControlsScript");
+
+            if (dataStore.hostConfig.host === "SharePoint") {
+                dataStore.hostConfig.controlsScriptPath = "/_layouts/15/online/scripts/SuiteExtensionsControls.js";
+                dataStore.hostConfig.controlsScriptLoadCallback = CallInitializeIconControls;
+            }
+
+            if (controlsFileRef == null || typeof SuiteExtensionsControls === 'undefined') {
+                if (dataStore.hostConfig.controlsScriptPath) {
+                    controlsFileRef = ScriptOnDemand.AddScriptToDocument(dataStore.hostConfig.controlsScriptPath, "SuiteExtensionsControlsScript", controlsFileRef);
+                    controlsFileRef.onload = function () {
+                        if (typeof dataStore.hostConfig.controlsScriptLoadCallback === "function") {
+                            dataStore.hostConfig.controlsScriptLoadCallback();
+                        }
+                    };
+                } else {
+                    dataStore.hostConfig.logging.WriteDebugLog("ScriptOnDemand.LoadControlsJavascript", true, "Unable to load controls script because HostConfig.controlsScriptPath is null");
+                }
+            } else {
+                if (typeof dataStore.hostConfig.controlsScriptLoadCallback === "function") {
+                    dataStore.hostConfig.controlsScriptLoadCallback();
+                }
+            }
+        };
+
+        ScriptOnDemand.LoadLocalizedStrings = function (hostConfig) {
+            if (hostConfig && hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.FileHandlerAddInPicker) && typeof hostConfig.localizedStringsPath === 'string' && hostConfig.localizedStringsPath && (typeof Strings === 'undefined' || typeof Strings.CloudApps === 'undefined')) {
+                var xmlHttp = new XMLHttpRequest();
+
+                xmlHttp.onreadystatechange = function () {
+                    if (xmlHttp.readyState === 4) {
+                        if (xmlHttp.status === 200) {
+                            hostConfig.logging.WriteSuccess("SuccessLoadLocalizedStrings");
+                            ScriptOnDemand.AddScriptToDocument(hostConfig.localizedStringsPath, "CloudAppsLocalizationScript");
+                        } else {
+                            hostConfig.logging.WriteFailure("FailedLoadLocalizedStrings");
+                        }
+                    }
+                };
+
+                xmlHttp.open("GET", hostConfig.localizedStringsPath, true);
+                xmlHttp.send("");
+                hostConfig.logging.WriteStart("StartLoadLocalizedStrings");
+            }
+        };
+        return ScriptOnDemand;
+    })();
+    SuiteExtensions.ScriptOnDemand = ScriptOnDemand;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var TestDataPipe = (function () {
+        function TestDataPipe() {
+        }
+        TestDataPipe.prototype.getData = function (extensionType, hostConfig) {
+            var extType = extensionType;
+            var jsonManifest = [
+                {
+                    'type': 'FileHandler',
+                    'appId': '4463c52c-491f-4559-a2b1-8b688fca9eb9',
+                    'displayName': 'GPX App',
+                    'addInId': '12b4c4f2-d1c5-c12a-6245-1b5c3fdd85b1',
+                    'properties': {
+                        'extension': 'gpx',
+                        'fileIcon': 'https://gpxfileapp-int.azurewebsites.net/content/pinpoint-16x16.png',
+                        'openUrl': 'https://gpxfileapp-int.azurewebsites.net/FileHandler/Open',
+                        'previewUrl': 'https://gpxfileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'newFileUrl': 'https://gpxfileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'addInId': '4463c52c-491f-4559-a2b1-8b688fca9eb9',
+                    'displayName': 'TWS test app',
+                    'appId': '41e0235f-7bc4-4b32-83ec-2f4a7951be84',
+                    'properties': {
+                        'extension': 't',
+                        'fileIcon': 'https://testfilehandler.azurewebsites.net/icon.png',
+                        'openUrl': 'https://testfilehandler.azurewebsites.net/FileHandler/Open',
+                        'previewUrl': 'https://testfilehandler.azurewebsites.net/FileHandler/preview'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': '6f7b9f0c-e0f9-41f9-9bff-bcf66d599c2b',
+                    'displayName': 'TEST or INI App',
+                    'addInId': '5f0b526b-f1e4-4def-9d43-3b0d28d4ff53',
+                    'properties': {
+                        'extension': 'test',
+                        'fileIcon': 'https://testorinifileapp-int.azurewebsites.net/content/test.png',
+                        'openUrl': 'https://testorinifileapp-int.azurewebsites.net/FileHandler/Open',
+                        'newFileUrl': 'https://testorinifileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': '6f7b9f0c-e0f9-41f9-9bff-bcf66d599c2b',
+                    'displayName': 'TEST or INI App',
+                    'addInId': 'e94ca6fe-66c3-4212-b4db-3c32c2b00d85',
+                    'properties': {
+                        'extension': 'ini',
+                        'previewUrl': 'https://testorinifileapp-int.azurewebsites.net/FileHandler/Preview'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'f02cf431-6830-4090-9e3e-f8526e676852',
+                    'displayName': 'DRW App',
+                    'addInId': 'b0497361-9dff-4fcf-a8ac-ae11b5f27f1c',
+                    'properties': {
+                        'extension': 'drw',
+                        'openUrl': 'https://drwfileapp-int.azurewebsites.net/FileHandler/Open',
+                        'previewUrl': 'https://drwfileapp-int.azurewebsites.net/FileHandler/Preview'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': '523f34b4-200f-4239-aa3d-67682bf24bdc',
+                    'displayName': 'OFF App',
+                    'addInId': '55d5929b-e6d3-4518-8297-98078e4f0ee8',
+                    'properties': {
+                        'extension': 'off',
+                        'fileIcon': 'https://offfileapp-int.azurewebsites.net/content/off.png',
+                        'openUrl': 'https://offfileapp-int.azurewebsites.net/FileHandler/Open',
+                        'newFileUrl': 'https://offfileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'f266399a-ab8d-4407-9f2d-797a35a75d3f',
+                    'displayName': 'OFF or OFFICE App',
+                    'addInId': '5afb40fd-3604-4cbe-b991-82d01a66a29b',
+                    'properties': {
+                        'extension': 'off',
+                        'fileIcon': 'https://offorofficefileapp-int.azurewebsites.net/content/off-mt.png',
+                        'previewUrl': 'https://offorofficefileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'newFileUrl': 'https://offorofficefileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'f266399a-ab8d-4407-9f2d-797a35a75d3f',
+                    'displayName': 'OFF or OFFICE App',
+                    'addInId': '3a3ff70e-23c7-4dae-8bad-43c314a98b82',
+                    'properties': {
+                        'extension': 'office',
+                        'fileIcon': 'https://offorofficefileapp-int.azurewebsites.net/content/office.png',
+                        'previewUrl': 'https://offorofficefileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'openUrl': 'https://offorofficefileapp-int.azurewebsites.net/FileHandler/Open',
+                        'newFileUrl': 'https://offorofficefileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'b565d800-242f-4eef-aa2e-1b5f09529a94',
+                    'displayName': 'EXT App',
+                    'addInId': '0c21f706-6071-4b2c-9273-59ea1f486eb9',
+                    'properties': {
+                        'extension': 'ext1',
+                        'previewUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'openUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Open'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'b565d800-242f-4eef-aa2e-1b5f09529a94',
+                    'displayName': 'EXT App',
+                    'addInId': '88551be5-def0-4aeb-b2b6-6bf2e259f3ea',
+                    'properties': {
+                        'extension': 'ext2',
+                        'fileIcon': 'https://extfileapp-int.azurewebsites.net/content/ext2.png',
+                        'openUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Open'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'b565d800-242f-4eef-aa2e-1b5f09529a94',
+                    'displayName': 'EXT App',
+                    'addInId': 'da4b51ef-4b12-434a-b79d-0e930db6f133',
+                    'properties': {
+                        'extension': 'ext3',
+                        'fileIcon': 'https://extfileapp-int.azurewebsites.net/content/ext3.png',
+                        'previewUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'newFileUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'b565d800-242f-4eef-aa2e-1b5f09529a94',
+                    'displayName': 'EXT App',
+                    'addInId': '92f9bcf2-aa0f-4a68-8714-c648af3fb715',
+                    'properties': {
+                        'extension': 'ext4',
+                        'fileIcon': 'https://extfileapp-int.azurewebsites.net/content/ext4.png',
+                        'newFileUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'appId': 'b565d800-242f-4eef-aa2e-1b5f09529a94',
+                    'displayName': 'EXT App',
+                    'addInId': '7fed2d59-55b3-490d-819c-474dfd772900',
+                    'properties': {
+                        'extension': 'ext5',
+                        'previewUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Preview',
+                        'openUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/Open',
+                        'newFileUrl': 'https://extfileapp-int.azurewebsites.net/FileHandler/NewFile'
+                    }
+                },
+                {
+                    'type': 'FileHandler',
+                    'addInId': '0436ffad-8131-4307-963b-9595ebb34e85',
+                    'displayName': 'Code View App',
+                    'appId': '41e0235f-7bc4-4b32-83ec-2f4a7951be84',
+                    'properties': {
+                        'extension': 'txa;txb;txc;off',
+                        'fileIcon': 'https://codeviewapp.azurewebsites.net/content/fileicon.png',
+                        'openUrl': 'https://codeviewapp.azurewebsites.net/filehandler/open',
+                        'previewUrl': 'https://codeviewapp.azurewebsites.net/filehandler/preview',
+                        'newFileUrl': 'https://codeviewapp.azurewebsites.net/filehandler/newfile'
+                    }
+                }
+            ];
+
+            var manifestString = JSON.stringify(jsonManifest);
+            SuiteExtensions.SuiteExtensionsDataStore.dataPipeSuccessCallback(extType, manifestString);
+        };
+        return TestDataPipe;
+    })();
+    SuiteExtensions.TestDataPipe = TestDataPipe;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var SuiteExtensionsDataStore = (function () {
+        function SuiteExtensionsDataStore() {
+            this.extensionsDictionary = {};
+            this.refreshRequested = false;
+            if (SuiteExtensionsDataStore._instance) {
+                throw new Error("Error: Instantiation failed: Use SuiteExtensionsDataStore.GetInstance() instead of new.");
+            }
+            SuiteExtensionsDataStore._instance = this;
+            this.localStorage = SuiteExtensions.SuiteExtensionsLocalStorage.GetInstance();
+            this.useAzureDataPipe = false;
+
+            var refreshDetector = SuiteExtensions.RefreshDetector.GetInstance();
+            if (refreshDetector.IsRefresh()) {
+                this.refreshRequested = true;
+            }
+            refreshDetector.ListenForRefresh();
+        }
+        SuiteExtensionsDataStore.Initialize = function (hostConfig) {
+            SuiteExtensions.ScriptOnDemand.LoadLocalizedStrings(hostConfig);
+            var useAzureDataPipe = hostConfig.isFlightEnabled(SuiteExtensions.AddInsFlights.AzureDataPipe);
+
+            var dataStoreInstance = SuiteExtensionsDataStore.GetInstance();
+            if (dataStoreInstance.hostConfig == null) {
+                var refreshDetector = SuiteExtensions.RefreshDetector.GetInstance();
+                hostConfig.logging.WriteStart("StartIsRefresh");
+                if (refreshDetector.IsRefresh()) {
+                    hostConfig.logging.WriteSuccess("SuccessIsRefresh");
+                } else {
+                    hostConfig.logging.WriteFailure("FailedIsRefresh");
+                }
+                hostConfig.logging.WriteStart("StartRefreshDetectorStatus");
+                switch (refreshDetector.GetStatus()) {
+                    case SuiteExtensions.RefreshDetectorStatus.NotRefresh:
+                    case SuiteExtensions.RefreshDetectorStatus.Refresh:
+                        hostConfig.logging.WriteSuccess("SuccessRefreshDetectorStatus");
+                        break;
+                    case SuiteExtensions.RefreshDetectorStatus.StorageNotSupported:
+                        hostConfig.logging.WriteFailure("FailedRefreshDetectorStatus_StorageNotSupported");
+                        break;
+                    case SuiteExtensions.RefreshDetectorStatus.PerformanceNotSupported:
+                        hostConfig.logging.WriteFailure("FailedRefreshDetectorStatus_PerformanceNotSupported");
+                        break;
+                    case SuiteExtensions.RefreshDetectorStatus.UnknownException:
+                        hostConfig.logging.WriteFailure("FailedRefreshDetectorStatus_UnknownException");
+                        break;
+                }
+            }
+            dataStoreInstance.set_host(hostConfig);
+            dataStoreInstance.SetDataPipe(useAzureDataPipe);
+            dataStoreInstance.GetDataFromLocalStorage();
+        };
+
+        SuiteExtensionsDataStore.GetInstance = function () {
+            if (SuiteExtensionsDataStore._instance === null) {
+                SuiteExtensionsDataStore._instance = new SuiteExtensionsDataStore();
+            }
+            return SuiteExtensionsDataStore._instance;
+        };
+
+        SuiteExtensionsDataStore.dataPipeSuccessCallback = function (extensionType, extensionData) {
+            var dataStore = SuiteExtensionsDataStore.GetInstance();
+            try  {
+                dataStore.hostConfig.logging.WriteDebugLog("StartSetLocalStorage", false, "Starting to set local storage with add-in data");
+                dataStore.hostConfig.logging.WriteStart("StartSetLocalStorage");
+                dataStore.localStorage.SetItem(extensionType, extensionData);
+                dataStore.hostConfig.logging.WriteSuccess("SuccessSetLocalStorage");
+                dataStore.hostConfig.logging.WriteDebugLog("SuccessSetLocalStorage", false, "Successfully set local storage with add-in data");
+            } catch (e) {
+                dataStore.hostConfig.logging.WriteFailure("FailedSetLocalStorage");
+                dataStore.hostConfig.logging.WriteDebugLog("FailedSetLocalStorage", true, "Failed to set local storage with add-in data in this browser " + e.message);
+            }
+
+            dataStore.GetDataFromStorageAndLoadControlsJS(extensionType, "StartLoadControlsScriptOnNewData", "SuccessLoadControlsScriptOnNewData");
+        };
+
+        SuiteExtensionsDataStore.dataPipeFailCallback = function (e) {
+            SuiteExtensionsDataStore.GetInstance().hostConfig.logging.WriteDebugLog("FailedAzureDataPipe", true, "Failed to get the add-in data from azure" + e.message);
+            var dataStore = SuiteExtensionsDataStore.GetInstance();
+
+            var extensionType = SuiteExtensions.AddInType.FileHandler;
+
+            if (e.description) {
+                var description = JSON.parse(e.description);
+                var errorCode;
+                if (description['odata.error'] && description['odata.error'].code) {
+                    errorCode = description['odata.error'].code;
+                } else if (description['error'] && description['error'].code) {
+                    errorCode = description['error'].code;
+                }
+
+                if (errorCode && errorCode == SuiteExtensionsDataStore.ThrottledErrorCode) {
+                    try  {
+                        dataStore.hostConfig.logging.WriteDebugLog("StartExtendExpirationTime", false, "Starting to extend expiration time");
+                        dataStore.hostConfig.logging.WriteStart("StartExtendExpirationTime");
+                        dataStore.localStorage.ExtendExpirationTime(extensionType);
+                        dataStore.hostConfig.logging.WriteSuccess("SuccessExtendExpirationTime");
+                        dataStore.hostConfig.logging.WriteDebugLog("SuccessExtendExpirationTime", false, "Successfully extended expiration time");
+                    } catch (e) {
+                        dataStore.hostConfig.logging.WriteFailure("FailedExtendExpirationTime");
+                        dataStore.hostConfig.logging.WriteDebugLog("FailedExtendExpirationTime", true, "Failed to extend expiration time in this browser " + e.message);
+                    }
+
+                    dataStore.GetDataFromStorageAndLoadControlsJS(extensionType, "StartLoadControlsScriptOnExpiredData", "SuccessLoadControlsScriptOnExpiredData");
+                }
+            }
+        };
+
+        SuiteExtensionsDataStore.prototype.SetDataPipe = function (useAzureDataPipe) {
+            this.useAzureDataPipe = useAzureDataPipe;
+
+            if (this.useAzureDataPipe === true) {
+                this.dataPipe = new SuiteExtensions.AzureDataPipe();
+            } else {
+                this.dataPipe = new SuiteExtensions.TestDataPipe();
+            }
+        };
+
+        SuiteExtensionsDataStore.prototype.set_host = function (hostConfig) {
+            this.hostConfig = hostConfig;
+        };
+
+        SuiteExtensionsDataStore.prototype.GetDataFromLocalStorage = function () {
+            var extensionType = SuiteExtensions.AddInType.FileHandler;
+
+            if (this.localStorage != null) {
+                this.GetDataFromStorageAndLoadControlsJS(extensionType, "StartLoadControlsScript", "SuccessLoadControlsScript");
+
+                if (this.localStorage.IsExpired(extensionType) || this.refreshRequested) {
+                    this.refreshRequested = false;
+                    this.dataPipe.getData(extensionType, this.hostConfig);
+                }
+            } else {
+                this.hostConfig.logging.WriteEngagementLog("LocalStorageNotSupportedInBrowser", null);
+                var browserInfo = navigator.appCodeName + navigator.appName + navigator.appVersion;
+                this.hostConfig.logging.WriteDebugLog("LocalStorageNotSupportedInBrowser", true, "Local Storage is not supported in this browser: " + browserInfo);
+            }
+        };
+
+        SuiteExtensionsDataStore.prototype.GetExtensions = function (extensionType) {
+            if (this.extensionsDictionary[extensionType]) {
+                return this.extensionsDictionary[extensionType];
+            }
+            return null;
+        };
+
+        SuiteExtensionsDataStore.prototype.GetDataFromStorageAndLoadControlsJS = function (extensionType, loadControlsJSLogStartMsg, loadControlsJSLogEndMsg) {
+            if (this.localStorage != null) {
+                try  {
+                    this.hostConfig.logging.WriteDebugLog("StartGetLocalStorageItem", false, "Trying to get add-ins from local storage");
+                    this.hostConfig.logging.WriteStart("StartGetLocalStorageItem");
+                    var extensionTypeValue = this.localStorage.GetItemObject(extensionType);
+                    this.hostConfig.logging.WriteSuccess("SuccessGetLocalStorageItem");
+                    this.hostConfig.logging.WriteDebugLog("SuccessGetLocalStorageItem", false, "Successfully retrieved add-ins from local storage");
+                } catch (e) {
+                    this.hostConfig.logging.WriteFailure("FailedGetLocalStorageItem");
+                    this.hostConfig.logging.WriteDebugLog("FailedGetLocalStorageItem", true, "Failed to retrive add in from local storage: " + e.message);
+                }
+
+                if (extensionTypeValue != null && extensionTypeValue.length > 0) {
+                    this.extensionsDictionary[extensionType] = extensionTypeValue;
+
+                    this.hostConfig.logging.WriteDebugLog(loadControlsJSLogStartMsg, false, "Trying to load suite extensions controls javascript");
+                    this.hostConfig.logging.WriteStart(loadControlsJSLogStartMsg);
+                    SuiteExtensions.ScriptOnDemand.LoadControlsJavascript();
+                    this.hostConfig.logging.WriteSuccess(loadControlsJSLogEndMsg);
+                    this.hostConfig.logging.WriteDebugLog(loadControlsJSLogEndMsg, false, "Successfully loaded suite extensions controls javascript");
+                }
+            }
+        };
+
+        SuiteExtensionsDataStore.prototype.getAddIns = function (addInType, addInFilter) {
+            var addIns = [];
+            var extensions = this.GetExtensions(addInType);
+
+            var addInIndex = 0;
+            if (extensions != null) {
+                for (var i = 0; i < extensions.length; i++) {
+                    var extension = extensions[i];
+                    if (extension["type"] === addInType) {
+                        var fileHandlerAddIn = new SuiteExtensions.FileHandlerAddIn(extension);
+                        if (addInFilter.IsMatch(fileHandlerAddIn)) {
+                            addIns[addInIndex] = fileHandlerAddIn;
+                            addInIndex++;
+                        }
+                    }
+                }
+            }
+
+            return addIns;
+        };
+
+        SuiteExtensionsDataStore.IsValidUrlForFileHandlerApp = function (appId, appUrl) {
+            var dataStore = SuiteExtensionsDataStore.GetInstance();
+            dataStore.hostConfig.logging.WriteStart("IsValidUrlForApp_Start");
+
+            var fileHandlerAddIns = null;
+            try  {
+                fileHandlerAddIns = dataStore.localStorage.GetItemObject(SuiteExtensions.AddInType.FileHandler);
+            } catch (e) {
+                dataStore.hostConfig.logging.WriteDebugLog("IsValidUrlForApp", true, "Failed to retrive add in from local storage: " + e.message);
+                dataStore.hostConfig.logging.WriteFailure("IsValidUrlForApp_Failure");
+                return false;
+            }
+
+            var isValidUrl = false;
+            if (fileHandlerAddIns != null && fileHandlerAddIns.length > 0) {
+                for (var i = 0; i < fileHandlerAddIns.length; i++) {
+                    if (fileHandlerAddIns[i] && fileHandlerAddIns[i].properties && fileHandlerAddIns[i].appId === appId && (fileHandlerAddIns[i].properties.previewUrl === appUrl || fileHandlerAddIns[i].properties.openUrl === appUrl || fileHandlerAddIns[i].properties.newFileUrl === appUrl)) {
+                        isValidUrl = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isValidUrl) {
+                dataStore.hostConfig.logging.WriteSuccess("IsValidUrlForApp_Success");
+            } else {
+                dataStore.hostConfig.logging.WriteDebugLog("IsValidUrlForApp", true, "appId: " + appId + ", appUrl: " + appUrl);
+                dataStore.hostConfig.logging.WriteFailure("IsValidUrlForApp_Failure");
+            }
+
+            return isValidUrl;
+        };
+        SuiteExtensionsDataStore.ThrottledErrorCode = "GetByType_Throttled";
+        SuiteExtensionsDataStore._instance = null;
+        return SuiteExtensionsDataStore;
+    })();
+    SuiteExtensions.SuiteExtensionsDataStore = SuiteExtensionsDataStore;
+})(SuiteExtensions || (SuiteExtensions = {}));
+var SuiteExtensions;
+(function (SuiteExtensions) {
+    var SuiteExtensionsLocalStorage = (function () {
+        function SuiteExtensionsLocalStorage() {
+            if (SuiteExtensionsLocalStorage.instance) {
+                throw new Error("Error: Instantiation failed: Use SuiteExtensionsLocalStorage.GetInstance() instead of new.");
+            }
+
+            SuiteExtensionsLocalStorage.instance = this;
+        }
+        SuiteExtensionsLocalStorage.GetInstance = function () {
+            if (!SuiteExtensionsLocalStorage.Supported()) {
+                return null;
+            }
+
+            if (SuiteExtensionsLocalStorage.instance === null) {
+                SuiteExtensionsLocalStorage.instance = new SuiteExtensionsLocalStorage();
+            }
+
+            return SuiteExtensionsLocalStorage.instance;
+        };
+
+        SuiteExtensionsLocalStorage.prototype.SetItem = function (extensionType, jsonString) {
+            this.SetItemInternal(this.GetExtensionTypeKey(extensionType), jsonString);
+            this.SetItemInternal(this.GetExpirationKey(extensionType), new Date().getTime().toString());
+        };
+
+        SuiteExtensionsLocalStorage.prototype.ExtendExpirationTime = function (extensionType) {
+            this.SetItemInternal(this.GetExpirationKey(extensionType), (new Date().getTime() + SuiteExtensionsLocalStorage.ThrottlingWaitPeriod).toString());
+        };
+
+        SuiteExtensionsLocalStorage.prototype.GetItem = function (extensionType) {
+            return this.GetItemInternal(this.GetExtensionTypeKey(extensionType));
+        };
+
+        SuiteExtensionsLocalStorage.prototype.SetItemObject = function (extensionType, jsonObject) {
+            this.SetItem(extensionType, JSON.stringify(jsonObject));
+        };
+
+        SuiteExtensionsLocalStorage.prototype.GetItemObject = function (extensionType) {
+            return JSON.parse(this.GetItem(extensionType));
+        };
+
+        SuiteExtensionsLocalStorage.prototype.GetExpirationKey = function (extensionType) {
+            return this.GetExtensionTypeKey(extensionType) + ".LocalStorageSetTime";
+        };
+
+        SuiteExtensionsLocalStorage.prototype.IsExpired = function (extensionType) {
+            var value = this.GetItemInternal(this.GetExpirationKey(extensionType));
+
+            if (value == null || value == undefined) {
+                return true;
+            } else {
+                var lastUpdatedTime = +value;
+                var currentTime = new Date().getTime();
+                if ((currentTime - lastUpdatedTime) >= SuiteExtensionsLocalStorage.MaximumExpiredPeriod) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        SuiteExtensionsLocalStorage.Supported = function () {
+            try  {
+                localStorage.setItem("Test", "2");
+                localStorage.removeItem("Test");
+                return true;
+            } catch (e) {
+                return false;
+            }
+        };
+
+        SuiteExtensionsLocalStorage.prototype.GetExtensionTypeKey = function (extensionType) {
+            return "Office365.AddIns." + extensionType + "." + SuiteExtensions.SuiteExtensionsDataStore.GetInstance().hostConfig.userId;
+        };
+
+        SuiteExtensionsLocalStorage.prototype.SetItemInternal = function (key, value) {
+            localStorage.setItem(key, value);
+        };
+
+        SuiteExtensionsLocalStorage.prototype.GetItemInternal = function (key) {
+            return localStorage.getItem(key);
+        };
+        SuiteExtensionsLocalStorage.MaximumExpiredPeriod = 604800000;
+
+        SuiteExtensionsLocalStorage.ThrottlingWaitPeriod = 86400000;
+
+        SuiteExtensionsLocalStorage.instance = null;
+        return SuiteExtensionsLocalStorage;
+    })();
+    SuiteExtensions.SuiteExtensionsLocalStorage = SuiteExtensionsLocalStorage;
+})(SuiteExtensions || (SuiteExtensions = {}));
+if (typeof window['define'] === 'function' && window['define']['amd']) { 
+define('SuiteExtensions', ['require', 'exports'], function (require, exports) { 
+exports.SuiteExtensions = SuiteExtensions; 
+}); 
+} 
