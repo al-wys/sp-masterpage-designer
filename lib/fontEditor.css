@@ -1,0 +1,12 @@
+.font-resizer {
+    width: 100px;
+    display: inline-block;
+}
+
+.font-resizer span {
+    width: inherit;
+}
+
+.font-resizer input {
+    width: inherit;
+}
