@@ -2,22 +2,29 @@ requirejs.config({
     'baseUrl': 'lib',
     'map': {
         '*': {
-            'css': 'css.min'
+            'css': 'css.min',
+            'jquery': 'jQuery'
+        },
+        'jQuery': {
+            'jquery': 'jquery'
         }
     },
     'paths': {
-        'jquery': 'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.4.min'
+        'jquery': 'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.4.min',
+        'jquery.ui': 'https://code.jquery.com/ui/1.12.1/jquery-ui.min'
     },
     'shim': {
-        'resizer': ['css!resizer']
+        'resizer': ['css!resizer'],
+        'fontEditor': ['css!fontEditor.css'],
+        'jquery.ui': ['jquery', 'css!https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css']
     }
 });
 
-requirejs(['jQuery'], function ($) {
+requirejs(['jquery'], function ($) {
     let editModeWasLoaded = false;
 
-    $('#btn-edit').click(function () {
-        requirejs(['resizer']);
+    $('#btnEdit').click(function () {
+        requirejs(['resizer', 'fontEditor']);
 
         $('.editor').show();
         $('.end-edit').show();
@@ -25,20 +32,20 @@ requirejs(['jQuery'], function ($) {
 
         if (!editModeWasLoaded) {
             editModeWasLoaded = true;
-            requirejs(['css-logger'], function (cssLogger) {
-                $('#btn-save').click(function () {
+            requirejs(['cssLogger'], function (cssLogger) {
+                $('#btnSave').click(function () {
                     cssLogger.save();
                 });
 
-                $('#btn-discard').click(function () {
+                $('#btnDiscard').click(function () {
                     cssLogger.discard();
                 });
 
-                $('#btn-code').click(function () {
+                $('#btnCode').click(function () {
                     alert(cssLogger.showSavedCode());
                 });
 
-                $('#btn-preview').click(function () {
+                $('#btnPreview').click(function () {
                     if (cssLogger.hasChange()) {
                         alert('You have unsaved changes.');
                     } else {
